@@ -1,0 +1,119 @@
+# Upload Claude Security plugin SARIF files to the GitHub Security tab (Code scanning).
+#
+# What it does
+#   1. discover  - finds *.sarif files in the chosen folder and builds one matrix entry per file with its own
+#                  Code scanning category. No validation here: GitHub validates the file on upload.
+#   2. upload    - one job per file: uploads it with github/codeql-action/upload-sarif using the category from
+#                  step 1 and waits until GitHub has processed it.
+#   3. report    - prints the upload result and a link to the Security tab in the job summary.
+#
+# Notes
+#   * Each category is an independent set of alerts. Uploading a file again to the same category CLOSES the alerts
+#     that are not in the new file. Different categories never close each other's alerts, but the same issue found
+#     in two categories (for example a scoped run and the full run) shows up as two alerts.
+#   * The plugin writes its own automationDetails.id (claude-security-plugin/scan/...), and the SARIF files of
+#     different runs can share it. The workflow passes "category" to upload-sarif and does NOT edit the files.
+#     TO CHECK after the first run: Security -> Code scanning -> Category filter must list one category per file
+#     (claude-security/run1-small-scope, ...). If two files end up in one category, the id from the file wins;
+#     then set automationDetails.id per file before the upload (for example with jq).
+#   * Alerts have no security-severity score, so GitHub shows the SARIF level (error / warning / note) as severity.
+
+name: Upload Claude Security SARIF
+
+on:
+  workflow_dispatch:
+    inputs:
+      sarif_dir:
+        description: Folder with .sarif files, relative to the repository root
+        required: true
+        default: sarif
+      category_prefix:
+        description: Prefix of the Code scanning category (category = prefix/file-name)
+        required: true
+        default: claude-security
+
+permissions:
+  contents: read
+
+# Never cancel a running upload: a half-finished set of categories is confusing.
+concurrency:
+  group: upload-claude-security-sarif-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    name: Find SARIF files
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      files: ${{ steps.find.outputs.files }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find SARIF files
+        id: find
+        env:
+          SARIF_DIR: ${{ inputs.sarif_dir }}
+          CATEGORY_PREFIX: ${{ inputs.category_prefix }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, re, sys
+
+          root = pathlib.Path(os.environ["SARIF_DIR"])
+          prefix = os.environ["CATEGORY_PREFIX"].strip("/ ") or "claude-security"
+
+          files = sorted(root.rglob("*.sarif")) if root.is_dir() else []
+          if not files:
+              print(f"::error::No .sarif files found under '{root}'.")
+              sys.exit(1)
+
+          entries = []
+          for f in files:
+              rel = f.relative_to(root).with_suffix("").as_posix()
+              entries.append({"path": f.as_posix(),
+                              "category": f"{prefix}/{re.sub(r'[^A-Za-z0-9._/-]+', '-', rel)}"})
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as s:
+              s.write("### SARIF files found\n\n| File | Category |\n|---|---|\n"
+                      + "\n".join(f"| `{e['path']}` | `{e['category']}` |" for e in entries) + "\n")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write("files=" + json.dumps(entries) + "\n")
+          PY
+
+  upload:
+    name: Upload ${{ matrix.category }}
+    needs: discover
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write # required to upload SARIF
+      actions: read # required by upload-sarif in private repositories
+    strategy:
+      fail-fast: false
+      max-parallel: 1 # one upload at a time, keeps the Security tab updates ordered
+      matrix:
+        include: ${{ fromJson(needs.discover.outputs.files) }}
+    steps:
+      # The checked-out files are used to compute alert fingerprints and to show code snippets.
+      - uses: actions/checkout@v4
+
+      - name: Upload SARIF to Code scanning
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: ${{ matrix.path }}
+          category: ${{ matrix.category }}
+          wait-for-processing: true
+
+  report:
+    name: Security tab link
+    needs: upload
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Print the Security tab link
+        run: |
+          echo "Upload result: **${{ needs.upload.result }}** - https://github.com/${{ github.repository }}/security/code-scanning?query=is%3Aopen+branch%3A${{ github.ref_name }}" >> "$GITHUB_STEP_SUMMARY"

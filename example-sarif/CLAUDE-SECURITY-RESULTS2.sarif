@@ -1,0 +1,204 @@
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Claude Security Plugin for Claude Code",
+          "organization": "Anthropic",
+          "informationUri": "https://claude.com/product/claude-security",
+          "version": "0.12.0",
+          "rules": [
+            {
+              "id": "CWE-862",
+              "name": "MissingAuthorization",
+              "shortDescription": {
+                "text": "Missing Authorization"
+              },
+              "fullDescription": {
+                "text": "Missing Authorization (CWE-862, CWE 4.20): findings whose CWE is this entry of the Simplified Mapping view or rolls up to it, reported by Claude Security Plugin for Claude Code from static review of the source."
+              },
+              "help": {
+                "text": "Each alert's message names the finding's own CWE and states the impact, exploit scenario, preconditions and recommended fix; the finding appears under its F<n> id in CLAUDE-SECURITY-RESULTS.md."
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/862.html",
+              "properties": {
+                "tags": [
+                  "security",
+                  "external/cwe/cwe-862"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "automationDetails": {
+        "id": "claude-security-plugin/scan/src/BuildingBlocks/Web/55a53037-33a9-4153-bbf5-5b94aeeaa5f6",
+        "guid": "55a53037-33a9-4153-bbf5-5b94aeeaa5f6"
+      },
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "toolExecutionNotifications": [
+            {
+              "descriptor": {
+                "id": "coverage/files-not-reached"
+              },
+              "level": "note",
+              "message": {
+                "text": "Research coverage: of 60 files in the components researched, 42 read to a conclusion, 17 declared not reached, 1 in no researcher's account; 0 more outside every component"
+              }
+            }
+          ]
+        }
+      ],
+      "originalUriBaseIds": {
+        "%SRCROOT%": {
+          "description": {
+            "text": "The top level of the scanned repository, or the scanned directory when the scan did not run inside a git checkout."
+          }
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CWE-862",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "Missing authorization check on user presence query.\n\nThe presence endpoint accepts user IDs from query string and passes them directly to GetStatus() without authorization checks, allowing any authenticated user to query presence of any other user.\n\nImpact: User enumeration and activity pattern disclosure - attackers can determine if specific users are online.\n\nExploit scenario: Authenticated user requests /api/v1/realtime/presence?userIds=other_user_id and receives their online status without permission.\n\nPreconditions: User is authenticated; Attacker knows target user IDs.\n\nRecommendation: Add authorization checks to ensure users can only query presence for users in the same channels/teams or add explicit permission requirements.\n\nCWE-862. Severity MEDIUM, confidence high."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/BuildingBlocks/Web/Realtime/HeroRealtimeExtensions.cs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 56,
+                  "snippet": {
+                    "text": "var map = presence.GetStatus(ids);"
+                  }
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "MapHeroRealtime",
+                  "fullyQualifiedName": "MapHeroRealtime"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "claudeSecurityPlugin": {
+              "id": "F1",
+              "title": "Missing authorization check on user presence query",
+              "impact": "User enumeration and activity pattern disclosure - attackers can determine if specific users are online.",
+              "file": "src/BuildingBlocks/Web/Realtime/HeroRealtimeExtensions.cs",
+              "line": 56,
+              "description": "The presence endpoint accepts user IDs from query string and passes them directly to GetStatus() without authorization checks, allowing any authenticated user to query presence of any other user.",
+              "exploit_scenario": "Authenticated user requests /api/v1/realtime/presence?userIds=other_user_id and receives their online status without permission.",
+              "preconditions": [
+                "User is authenticated",
+                "Attacker knows target user IDs"
+              ],
+              "category": "Missing Authorization",
+              "severity": "MEDIUM",
+              "confidence": "high",
+              "recommendation": "Add authorization checks to ensure users can only query presence for users in the same channels/teams or add explicit permission requirements.",
+              "cwe_id": "CWE-862",
+              "snippet": "var map = presence.GetStatus(ids);",
+              "symbol": "MapHeroRealtime",
+              "declared_line": 56,
+              "via_change": null,
+              "other_cwe_ids": [],
+              "claudeSecurityPluginFindingId": "v3:b5b0d676c4f9026b43f8f243d2da934ea140ef67b7cca3641a14f4971723ce07",
+              "verification": {
+                "panel": {
+                  "true": 3,
+                  "false": 0,
+                  "voters": 3
+                }
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "claudeSecurityPlugin": {
+          "generated_at": "2026-11-16T10:57:56+00:00",
+          "scan_id": "55a53037-33a9-4153-bbf5-5b94aeeaa5f6",
+          "mode": "scan",
+          "scan_prefix": "",
+          "scope": [
+            "src/BuildingBlocks/Web"
+          ],
+          "revision": {
+            "versioned": true,
+            "commit": "2f5989b243d702e0e2f089bd0258117da05f32e7",
+            "branch": "main",
+            "dirty": false
+          },
+          "revision_source": "self-reported",
+          "effort": "medium",
+          "run_shape": {
+            "requested_effort": "medium",
+            "collapsed": null,
+            "source": "coverage.json",
+            "diff_files": null,
+            "diff_lines": null,
+            "pre_existing": 0,
+            "scope_files": 60,
+            "empty_diff": false,
+            "empty_scope": false,
+            "researchers_dispatched": 10,
+            "skipped_components": [],
+            "completeness_check_outcome": "not-applicable",
+            "unaccounted_top_level_dirs": [],
+            "inventory_fallback": null,
+            "top_level_dir_count": null,
+            "target_files": 60,
+            "component_cap": 24,
+            "research_coverage": {
+              "files": 60,
+              "read": 42,
+              "not_reached": 17,
+              "unaccounted": 1,
+              "outside_components": 0,
+              "capped": false
+            }
+          },
+          "findings": {
+            "total": 1,
+            "critical": 0,
+            "high": 0,
+            "medium": 1,
+            "low": 0
+          },
+          "verification": {
+            "status": "verified",
+            "candidates": 2,
+            "candidates_deduped": 2,
+            "panel_votes": 6,
+            "panel_reviewed_findings": 1,
+            "panel_quorum_findings": 1,
+            "unreviewed_candidate_sites": 0,
+            "incomplete_panel_candidates": 0,
+            "attested_findings": 0,
+            "reason": null,
+            "researchers_dispatched": 10,
+            "researchers_returned": 10
+          },
+          "target_kind": "git-remote"
+        }
+      },
+      "versionControlProvenance": [
+        {
+          "repositoryUri": "https://github.com/OlehVintoniak/dotnet-starter-kit-fork",
+          "revisionId": "2f5989b243d702e0e2f089bd0258117da05f32e7"
+        }
+      ]
+    }
+  ]
+}
